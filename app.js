@@ -15,18 +15,32 @@ var express = require("express"),
 	review = require("./models/review"),
 	feedback = require("./models/feedback"),
 	appointment = require("./models/appointment"),
+	message=require("./models/message"),
 	days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
 	faker = require("faker"),
 	flash = require("connect-flash"),
 	fetch = require("node-fetch"),
 	path = require("path"),
-databaseURL = process.env.DATABASEURL || 'mongodb://localhost/clinicapp';
+	databaseURL = process.env.DATABASEURL || 'mongodb://localhost/clinicapp';
 arcgisRestGeocoding = require('@esri/arcgis-rest-geocoding'), {
 		geocode
 	} = arcgisRestGeocoding,
 	secret = process.env.SECRET || "We are clinicapp devlopers",
 	dfff = require('dialogflow-fulfillment');
-	
+	http = require('http').createServer(app);
+    client = require('socket.io').listen(http);
+	customers={}
+var client=require("socket.io").listen(http);
+var nodemailer = require('nodemailer');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+var transporter = nodemailer.createTransport({
+	service: 'gmail',
+	auth: {
+		user: 'pblvjti@gmail.com',
+		pass: 'urgonotgofbwfmsh'
+	}
+});
+
 const fileUpload = require('express-fileupload');
 
 mongoose.connect(databaseURL, {
@@ -79,6 +93,7 @@ var upload = multer({
 })
 
 var cloudinary = require('cloudinary');
+const { type } = require('os');
 cloudinary.config({
 	cloud_name: process.env.cloud_name,
 	api_key: process.env.api_key,
@@ -216,15 +231,17 @@ app.use(function (req, res, next) {
 app.get("/", async function (req, res) {
 	let response = await fetch("https://newsapi.org/v2/everything?q=COVID&from=2021-02-25&sortBy=publishedAt&apiKey=452748674a1945a99d99275e720f6c5c&pageSize=30&page=2&language=en");
 	response = await response.json();
-	res.render("homepage",{response:response.articles});
+	res.render("homepage", {
+		response: response.articles
+	});
 });
 
-app.get("/contacts", function(req,res){
+app.get("/contacts", function (req, res) {
 	res.render("contacts");
 });
 
-app.get("/webcamFaceExpressionRecognition", function (req, res) {
-	res.render("webcamFaceExpressionRecognition");
+app.get("/poseMatch", function (req, res) {
+	res.render("poseMatch");
 });
 
 // ABOUT
@@ -255,6 +272,18 @@ app.get("/picupdate", isLoggedIn, isdoctor, function (req, res) {
 app.get("/feedback", isLoggedIn, function (req, res) {
 	res.render("feedback");
 });
+
+app.get("/chats",isLoggedIn,function(req,res){
+	user.findById(req.user._id,function(err,foundUser){
+		if(err)
+		{
+			req.flash('error','Something went wrong');
+			return res.redirect('back');
+		}
+		res.render("chat",{user:foundUser});		
+	})
+	
+})
 
 app.post("/feedback", isLoggedIn, function (req, res) {
 	var fb = req.sanitize(req.body.feedback.feedback),
@@ -501,7 +530,7 @@ app.post("/signup", function (req, res) {
 	};
 	user.register(suser, req.body.password, function (err, newlyCreated) {
 		if (err || !newlyCreated) {
-			req.flash("error", "A User With That Username Already Exists");
+			req.flash("error", "A user With That username Already Exists");
 			return res.render("signup");
 		}
 		passport.authenticate("user")(req, res, function () {
@@ -510,6 +539,1001 @@ app.post("/signup", function (req, res) {
 		});
 	});
 });
+
+
+app.get("/details/:id", isLoggedIn, isdoctor, nodoctordes, function (req, res) {
+	var pm = {
+		id: req.params.id
+	};
+	res.render("docdes", {
+		pm: pm
+	});
+});
+
+app.post("/doctors/:id/deletereview", isLoggedIn, ispatient, function (req, res) {
+	review.findByIdAndRemove(req.params.id, function (err) {
+		if (err) {
+			req.flash("error", "Failed To Delete Review");
+			res.redirect("back");
+		} else {
+			res.redirect("/doctors");
+		}
+	})
+});
+
+app.post("/details/:id", isLoggedIn, isdoctor, nodoctordes, upload.single('image'), function (req, res) {
+	cloudinary.uploader.upload(req.file.path, function (result) {
+		user.findById(req.params.id, function (err, founddoctor) {
+			if (err) {
+				req.flash("error", "An Error Occured!! Please Try Again Later");
+				res.redirect("back");
+			} else {
+				if (result.secure_url) {
+					geocode(req.sanitize(req.body.address)).then((response) => {
+						founddoctor.loc.x = response.candidates[0].location.x;
+						founddoctor.loc.y = response.candidates[0].location.y;
+						founddoctor.image = result.secure_url;
+						founddoctor.image_id = result.public_id;
+						founddoctor.description = req.sanitize(req.body.description);
+						founddoctor.address = req.sanitize(req.body.address);
+						if (req.body.id0 == "on") {
+							founddoctor.schedule.push({
+								day: days[0],
+								from: req.body.id0from,
+								to: req.body.id0to
+							});
+						}
+						if (req.body.id1 == "on") {
+							founddoctor.schedule.push({
+								day: days[1],
+								from: req.body.id1from,
+								to: req.body.id1to
+							});
+						}
+						if (req.body.id2 == "on") {
+							founddoctor.schedule.push({
+								day: days[2],
+								from: req.body.id2from,
+								to: req.body.id2to
+							});
+						}
+						if (req.body.id3 == "on") {
+							founddoctor.schedule.push({
+								day: days[3],
+								from: req.body.id3from,
+								to: req.body.id3to
+							});
+						}
+						if (req.body.id4 == "on") {
+							founddoctor.schedule.push({
+								day: days[4],
+								from: req.body.id4from,
+								to: req.body.id4to
+							});
+						}
+						if (req.body.id5 == "on") {
+							founddoctor.schedule.push({
+								day: days[5],
+								from: req.body.id5from,
+								to: req.body.id5to
+							});
+						}
+						if (req.body.id6 == "on") {
+							founddoctor.schedule.push({
+								day: days[6],
+								from: req.body.id6from,
+								to: req.body.id6to
+							});
+						}
+						founddoctor.save();
+						req.flash("success", "Details Added Successfully");
+						res.redirect("/aplist");
+					});
+				} else {
+					req.flash("error", "An Error Occured!! Please Try Again Later");
+					res.redirect("back");
+				}
+			}
+		});
+	});
+});
+
+app.get("/doctors", function (req, res) {
+	//
+	var noMatch = false;
+	if (req.query.search) {
+		const regex = new RegExp(escapeRegex(req.query.search), 'gi');
+		// Get all users from DB
+		user.find({
+			fname: regex
+		}, function (err, alldoctors) {
+			if (err) {
+				console.log(err);
+			} else {
+				if (alldoctors.length < 1) {
+					noMatch = true;
+				}
+				res.render("doctors", {
+					doctors: alldoctors,
+					noMatch: noMatch
+				});
+			}
+		});
+	} else {
+		// Get all users from DB
+		user.find({}, function (err, alldoctors) {
+			if (err) {
+				console.log(err);
+			} else {
+				res.render("doctors", {
+					doctors: alldoctors,
+					noMatch: noMatch
+				});
+			}
+		});
+	}
+});
+
+app.get("/:id", function (req, res, next) {
+	user.findById(req.params.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "Doctor Not Found");
+			res.redirect("back");
+		} else {
+			if (doctor.type == "doctor" && doctor.address) {
+				return next();
+			} else {
+				req.flash("error", "Doctor Not Found");
+				res.redirect("back");
+			}
+		}
+	});
+}, function (req, res) {
+	user.findById(req.params.id).populate("reviews").populate("appointments").exec(function (err, founddoctor) {
+		if (err || !founddoctor) {
+			console.log(err);
+		} else {
+			// geocode(founddoctor.address);
+			// .then((response) => {
+			//   loc={x:response.candidates[0].location.x,
+			// 	y:response.candidates[0].location.y}; 
+			// 	res.render("show", {
+			// 		doctor: founddoctor,loc:loc
+			// 	});
+			// });
+			res.render("show", {
+				doctor: founddoctor
+			});
+		}
+	});
+});
+
+app.get("/history/:id", isLoggedIn, isdoctor, function (req, res) {
+	user.findById(req.params.id).populate("appointments").exec(function (err, foundpatient) {
+		if (err || !foundpatient) {
+			req.flash("error", "Patient Not Found");
+			res.redirect("back");
+		} else {
+			res.render("history", {
+				patient: foundpatient
+			});
+		}
+	});
+});
+
+app.get("/doctors/:id/:id2/newreview", isLoggedIn, ispatient,
+	function (req, res, next) {
+		appointment.findById(req.params.id2, function (err, foundappointment) {
+			if (err || !foundappointment) {
+				req.flash("error", "an error occured")
+			} else {
+				if (foundappointment.status == "CNF") {
+					return next();
+				} else {
+					req.flash("error", "You can leave a review only after your appointment is completed");
+					res.redirect("back");
+				}
+			}
+		});
+	},
+	function (req, res) {
+		// find doctor by id
+		user.findById(req.params.id, function (err, doctor) {
+			if (err || !doctor) {
+				console.log(err);
+			} else {
+				res.render("newreview", {
+					doctor: doctor
+				});
+			}
+		})
+	});
+
+app.post("/doctors/:id/newreview", isLoggedIn, ispatient, function (req, res) {
+	user.findById(req.params.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "An Error Occured!! Please Try Again");
+			res.redirect("back");
+		} else {
+			review.create(req.body.review, function (err, review) {
+				if (err || !review) {
+					console.log(err);
+				} else {
+					review.author.id = req.sanitize(req.user._id);
+					review.text = req.sanitize(req.body.text);
+					review.author.username = req.user.username;
+					review.save();
+					doctor.reviews.push(review);
+					doctor.save();
+					res.redirect("/doctors/" + doctor._id);
+				}
+			});
+		}
+	});
+});
+
+app.get("/doctors/:id/bookappointment", isLoggedIn, ispatient, function (req, res) {
+	user.findById(req.params.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "An Error Occured!! Please Try Again");
+			res.redirect("back");
+		} else {
+			res.render("bookappointment", {
+				doctor: doctor
+			});
+		}
+	})
+});
+
+app.post("/doctors/:id/bookappointment", isLoggedIn, ispatient, function (req, res) {
+	user.findById(req.params.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "An Error Occured!! Please Try Again");
+			res.redirect("back");
+		} else {
+			appointment.create({
+				patientname: req.user.fname,
+				doctorname: doctor.fname,
+				patientcn: req.user.contactnumber,
+				doctorcn: doctor.contactnumber,
+				appointmentdate: req.body.appointmentdate,
+				doctorid: doctor._id,
+				patientid: req.user._id
+			}, function (err, appointment) {
+				if (err || !appointment) {
+					req.flash("error", "An Error Occured!! Please Try Again");
+					res.redirect("back");
+				} else {
+					appointment.save();
+					doctor.appointments.push(appointment);
+					doctor.save();
+					req.user.appointments.push(appointment);
+					req.user.save();
+					req.flash("success", "Your Appointment Request Has Been Sent .Please Wait For Confirmation");
+					res.redirect("/patienthome");
+				}
+			});
+		}
+	});
+});
+
+app.get("/doctors/:id/bookappointment/:appointmentdate", isLoggedIn, ispatient, function (req, res) {
+	user.findById(req.params.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "An Error Occured!! Please Try Again");
+			res.redirect("back");
+		} else {
+			appointment.create({
+				patientname: req.user.fname,
+				doctorname: doctor.fname,
+				patientcn: req.user.contactnumber,
+				doctorcn: doctor.contactnumber,
+				appointmentdate: new Date(req.params.appointmentdate),
+				doctorid: doctor._id,
+				patientid: req.user._id
+			}, function (err, appointment) {
+				if (err || !appointment) {
+					console.log(err);
+					req.flash("error", "An Error Occured!! Please Try Again");
+					res.redirect("back");
+				} else {
+					appointment.save();
+					doctor.appointments.push(appointment);
+					doctor.save();
+					req.user.appointments.push(appointment);
+					req.user.save();
+					req.flash("success", "Your Appointment Request Has Been Sent .Please Wait For Confirmation");
+					res.redirect("/patienthome");
+				}
+			});
+		}
+	});
+});
+
+app.post("/addappointment", isLoggedIn, isdoctor, function (req, res) {
+	user.findById(req.user.id, function (err, doctor) {
+		if (err || !doctor) {
+			req.flash("error", "An Error Occured!! Please Try Again");
+			res.redirect("back");
+		} else {
+			appointment.create({
+				patientname: req.sanitize(req.body.patientname),
+				doctorname: doctor.fname,
+				patientcn: req.sanitize(req.body.patientcn),
+				doctorcn: doctor.contactnumber,
+				appointmentdate: req.body.appointmentdate,
+				doctorid: doctor._id
+			}, function (err, appointment) {
+				if (err || !appointment) {
+					req.flash("error", "An Error Occured!! Please Try Again");
+					res.redirect("back");
+				} else {
+					appointment.save();
+					doctor.appointments.push(appointment);
+					doctor.save();
+					req.flash("success", "Appointment Added Successfully");
+					res.redirect("/doctorhome/date/" + new Date(req.body.appointmentdate).getTime());
+				}
+			});
+		}
+	});
+});
+
+app.post("/signin", nouser, passport.authenticate("user", {
+	successRedirect: "/",
+	failureRedirect: "/signin"
+}), function (req, res) {});
+
+//  app.post("/signin",nouser, passport.authenticate("user"), function(req, res){
+// 	 if(req.isAuthenticated){
+// 		req.flash("success","Sign In Successful");
+// 		res.redirect("/");
+// 	 }
+// });
+
+app.get("/doctorhome/:id", isLoggedIn, isdoctor, function (req, res) {
+	var pm = {
+		id: req.params.id
+	};
+	appointment.findById(req.params.id, function (err, foundappointment) {
+		if (err || !foundappointment) {
+			req.flash("error", "Appointment Not Found");
+			res.redirect("back");
+		} else {
+			res.render("appointmentdetails", {
+				appointment: foundappointment,
+				pm: pm,
+				lengthh: foundappointment.fileuploads.length
+			});
+		}
+	});
+});
+
+app.post("/doctorhome/:id", isLoggedIn, isdoctor, async function (req, res) {
+	appointment.findById(req.params.id, function (err, foundappointment) {
+		if (err || !foundappointment) {
+			req.flash("error", "Appointment Not Found");
+			res.redirect("back");
+		} else {
+			if (req.body.status == "C") {
+				foundappointment.status = "C";
+				foundappointment.time = req.sanitize(req.body.time);
+				foundappointment.save();
+				var pemail;
+				appointment.findById(req.params.id).populate("patientid").exec(function (err, patient) {
+					if (err || !patient) {
+						console.log(err)
+						res.redirect("back");
+					} else {
+						console.log(patient);
+						var mailOptions = {
+							from: 'pblvjti@gmail.com',
+							to: patient.patientid.email,
+							subject: 'Email for confirmation of appointment',
+							text: 'Your appointment is confirmed!'
+						};
+
+						console.log(mailOptions);
+						transporter.sendMail(mailOptions, function (error, info) {
+							if (error) {
+								console.log(error);
+							} else {
+								console.log('Email sent: ' + info.response);
+							}
+						});
+					}
+				})
+				req.flash("success", "Appointment Details Updated");
+				res.redirect("back");
+			}
+			if (req.body.status == "R") {
+				foundappointment.status = "R";
+				foundappointment.save();
+				user.findById(req.user.id, function (err, founddoctor) {
+					if (err) {
+						console.log(err);
+					} else {
+						founddoctor.appointments.pop(foundappointment);
+						founddoctor.save();
+						req.flash("success", "Appointment Details Updated");
+						res.redirect("back");
+					}
+				});
+			}
+			if (req.body.status == "CNF") {
+				foundappointment.status = "CNF";
+				foundappointment.description = req.sanitize(req.body.description);
+				foundappointment.prescription = req.sanitize(req.body.prescription);
+				foundappointment.billamount = req.sanitize(req.body.billamount);
+				foundappointment.save();
+				req.flash("success", "Appointment Details Updated");
+				res.redirect("back");
+			}
+		}
+	});
+});
+
+app.get("/patienthome/:id", isLoggedIn, ispatient, async function (req, res) {
+	appointment.findById(req.params.id, function (err, foundappointment) {
+		if (err || !foundappointment) {
+			req.flash("error", "Appointment Not Found");
+			res.redirect("back");
+		} else {
+			if (foundappointment.prescription)
+				Promise.all(foundappointment.prescription.split(",").map((prescription) => fetch(`https://pharmeasy.in/api/search/search/?intent_id=1610822855978&page=1&q=${prescription}`)))
+				.then((meds) => Promise.all(meds.map((med) => med.json())))
+				.then((meds) => meds.map(({
+					data: {
+						products
+					},
+					query: {
+						q
+					}
+				}) => {
+					return {
+						q,
+						...products[0]
+					}
+				}))
+				.then((products) => res.render("adp", {
+					appointment: foundappointment,
+					products
+				}))
+				.catch(err => console.log(err));
+			else {
+				res.render("adp", {
+					appointment: foundappointment,
+					id: req.params.id
+				});
+			}
+		}
+	});
+});
+
+app.post("/patienthome/:id", function(req,res){
+	appointment.findById(req.params.id,function(err,foundappointment){
+		if(err){
+			req.flash("error", "Appointment Not Found");
+			return res.redirect("back");
+		} else {
+			res.render('checkout', {appointment : foundappointment})
+		};
+	});
+});
+
+app.post("/pay" , async (req,res) => {
+	const { paymentMethodId, items, app_id, currency } = req.body;
+  
+	const orderAmount = req.body.amount;
+  
+	try {
+	  // Create new PaymentIntent with a PaymentMethod ID from the client.
+	  const intent = await stripe.paymentIntents.create({
+		amount: orderAmount,
+		currency: currency,
+		payment_method: paymentMethodId,
+		error_on_requires_action: true,
+		confirm: true
+	  });
+  
+	  console.log("💰 Payment received! Rs. " + orderAmount/100);
+	  // The payment is complete and the money has been moved
+	  // You can add any post-payment code here (e.g. shipping, fulfillment, etc)
+  
+	  // Send the client secret to the client to use in the demo
+	  appointment.findById(app_id,function(err,foundappointment){
+		  if(err){
+			  console.log(err);
+			  res.send({error: err});
+		  } else {
+			  foundappointment.paid = true;
+			  foundappointment.save();
+		  }
+	  })
+	  res.send({ clientSecret: intent.client_secret });
+	} catch (e) {
+	  // Handle "hard declines" e.g. insufficient funds, expired card, card authentication etc
+	  // See https://stripe.com/docs/declines/codes for more
+	  if (e.code === "authentication_required") {
+		res.send({
+		  error:
+			"This card requires authentication in order to proceeded. Please use a different card."
+		});
+	  } else {
+		res.send({ error: e.message });
+	  }
+	}
+  
+  })
+  
+
+app.post('/upload/:id', isLoggedIn, ispatient, function (req, res) {
+	// The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
+	var startup_image = req.files.foo;
+	var fileName = `
+												$ {
+													req.body.fileName
+												}
+												_$ {
+													req.params.id
+												}.jpg `;
+	// Use the mv() method to place the file somewhere on your server
+	appointment.findById(req.params.id, function (err, foundappointment) {
+		if (err || !foundappointment) {
+			req.flash("error", "Appointment Not Found");
+			res.redirect("back");
+		} else {
+			foundappointment.fileuploads.push(fileName);
+			foundappointment.save();
+			console.log(foundappointment);
+		}
+	});
+	startup_image.mv(__dirname + '/images/' + fileName, function (err) {
+		if (err) {
+			console.log(err);
+		} else {
+			console.log("uploaded");
+		}
+		res.redirect("back");
+	});
+});
+
+
+app.get("/videoCall/:id", isLoggedIn, function (req, res) {
+	console.log("idhar - ",req.user.type);
+	res.render("videoCall", {
+		id: req.params.id,
+		type : req.user.type
+	});
+});
+
+app.post('/chatBot', express.json(), (req, res) => {
+	const agent = new dfff.WebhookClient({
+		request: req,
+		response: res
+	});
+	async function getDoctorDetails(agent) {
+		const resp = await geocode(agent.context.get("location").parameters["location.original"]);
+		const location = {
+			x: resp.candidates[0].location.x,
+			y: resp.candidates[0].location.y
+		}
+		var doctors = (await user.find({
+			type: "doctor"
+		})).sort(function (a, b) {
+			return ((Number(a.loc.x) - Number(location.x)) ** 2 + (Number(a.loc.y) - Number(location.y)) ** 2) ** 0.5 -
+				((Number(b.loc.x) - Number(location.x)) ** 2 + (Number(b.loc.y) - Number(location.y)) ** 2) ** 0.5;
+		}).splice(0, 5);
+		const response = await fetch('http://b3e0162ab9e2.ngrok.io/predictdisease', {
+			method: 'POST',
+			body: JSON.stringify({
+				symptoms: agent.context.get("symptoms").parameters["symptoms"].map(symptom => symptom.split(" ").join("_"))
+			}),
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		try {
+			const res = await response.json();
+			console.log(res);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `
+												You might suffering from $ {
+													res.result
+												}.We have found the following doctors nearest to your location best treating the disease you are suffering from `,
+					}],
+					[...doctors.map(doctor => {
+						return {
+							"type": "accordion",
+							"title": doctor.fname,
+							"subtitle": doctor.lname,
+							"image": {
+								"src": {
+									"rawUrl": doctor.image
+								}
+							},
+							"text": doctor.description
+						}
+					})]
+				]
+			}
+		} catch (err) {
+			console.log(err);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `
+												I couldn 't understand you.'
+												`,
+					}]
+				]
+			}
+		}
+		agent.add(new dfff.Payload(agent.UNSPECIFIED, payloadData, {
+			sendAsMessage: true,
+			rawPayload: true
+		}))
+	}
+
+	async function shoWDoctorsTiming(agent) {
+		try {
+			var doctor = await user.findOne({
+				type: "doctor",
+				fname: agent.context.get("given-name").parameters["given-name"]
+			});
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": "The available timings are: ",
+					}],
+					[...doctor.schedule.map(schedule => {
+						return {
+							"type": "accordion",
+							"title": `
+												$ {
+													schedule.day
+												}
+												$ {
+													schedule.from
+												}: 00 - $ {
+													schedule.to
+												}: 00 `,
+						}
+					})],
+				]
+			}
+			console.log(agent.context.get("given-name"));
+		} catch (err) {
+			console.log(err);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `
+												I couldn 't understand you.'
+												`,
+					}]
+				]
+			}
+		}
+		agent.add(new dfff.Payload(agent.UNSPECIFIED, payloadData, {
+			sendAsMessage: true,
+			rawPayload: true
+		}))
+	}
+	async function bookappointment(agent) {
+		try {
+			var doctor = await user.findOne({
+				type: "doctor",
+				fname: agent.context.get("given-name").parameters["given-name"]
+			});
+			console.log(agent.context.get("date-time").parameters["date-time"]);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": "Click here to send Booking request",
+						"image": {
+							"src": {
+								"rawUrl": "https://example.com/images/logo.png"
+							}
+						},
+						"actionLink": ` / doctors / $ {
+													doctor._id
+												}
+												/bookappointment/$ {
+													agent.context.get("date-time").parameters["date-time"].date_time
+												}
+												`
+					}]
+				]
+			}
+		} catch (err) {
+			console.log(err);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `
+												I couldn 't understand you.'
+												`,
+					}]
+				]
+			}
+		}
+		agent.add(new dfff.Payload(agent.UNSPECIFIED, payloadData, {
+			sendAsMessage: true,
+			rawPayload: true
+		}))
+	}
+	async function diet(agent) {
+		try {
+			var info = agent.context.get("phys_exercise").parameters["phys_exercise"];
+			var requestBody = {
+				name: "Mehdi",
+				weight: agent.context.get("weight").parameters["weight"],
+				height: agent.context.get("height").parameters["height"],
+				age: agent.context.get("age").parameters["age"],
+				gender: agent.context.get("gender").parameters["gender"],
+				physical_activity: info,
+			};
+
+			console.log(requestBody);
+			var responseData;
+
+			const response = await fetch("http://b3e0162ab9e2.ngrok.io/suggestdiet", {
+				method: "POST",
+				body: JSON.stringify(requestBody),
+				headers: {
+					"Content-Type": "application/json"
+				},
+			});
+			const json = await response.json();
+			console.log(json);
+			var payloadData = {
+				richContent: [
+					[{
+						type: "info",
+						title: "Your recommended diet plan is: ",
+					}, ],
+					[{
+							type: "list",
+							title: "Breakfast",
+							subtitle: json["breakfast"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+						{
+							type: "divider",
+						},
+						{
+							type: "list",
+							title: "Snack 1",
+							subtitle: json["snack1"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+						{
+							type: "divider",
+						},
+						{
+							type: "list",
+							title: "Lunch",
+							subtitle: json["lunch"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+						{
+							type: "divider",
+						},
+						{
+							type: "list",
+							title: "Snack 2",
+							subtitle: json["snack2"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+						{
+							type: "divider",
+						},
+						{
+							type: "list",
+							title: "Dinner",
+							subtitle: json["dinner"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+						{
+							type: "divider",
+						},
+						{
+							type: "list",
+							title: "Snack 3",
+							subtitle: json["snack3"],
+							event: {
+								name: "",
+								languageCode: "",
+								parameters: {},
+							},
+						},
+					],
+				],
+			};
+		} catch (err) {
+			console.log(err);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `
+												I couldn 't understand you.'
+												`,
+					}]
+				]
+			}
+		}
+
+		agent.add(
+			new dfff.Payload(agent.UNSPECIFIED, payloadData, {
+				sendAsMessage: true,
+				rawPayload: true,
+			})
+		);
+	}
+
+	async function covid(agent) {
+		try {
+			var country = agent.context.get('country').parameters['country'];
+			var response = await fetch(`
+												https: //api.covid19api.com/live/country/${country}`);
+			response = await response.json();
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "description",
+						"title": response[0].Country,
+						"text": [
+							`Confirmed Cases in ${country} ${response.reduce((Confirmed,province)=>Confirmed+province.Confirmed,0)}`,
+							`Confirmed Deaths in ${country} ${response.reduce((Deaths,province)=>Deaths+province.Deaths,0)}`,
+							`Confirmed Recovered in ${country} ${response.reduce((Recovered,province)=>Recovered+province.Recovered,0)}`,
+							`Confirmed Active in ${country} ${response.reduce((Active,province)=>Active+province.Active,0)}`,
+						]
+					}]
+				]
+			}
+		} catch (err) {
+			console.log(err);
+			var payloadData = {
+				"richContent": [
+					[{
+						"type": "info",
+						"title": `I couldn't understand you.'`,
+					}]
+				]
+			}
+		}
+		agent.add(
+			new dfff.Payload(agent.UNSPECIFIED, payloadData, {
+				sendAsMessage: true,
+				rawPayload: true,
+			})
+		);
+	}
+
+	function defaultFallback(agent) {
+		agent.add(
+			"Sorry! I am unable to understand this at the moment. I am still learning humans. You can pick any of the service that might help me."
+		);
+	}
+	var intentMap = new Map();
+	intentMap.set("add_location", getDoctorDetails);
+	intentMap.set("show_doctors_timing", shoWDoctorsTiming);
+	intentMap.set("confirm_time", bookappointment);
+	intentMap.set("ask physical exercise", diet);
+	intentMap.set("Default Fallback Intent", defaultFallback);
+	intentMap.set("Covid", covid);
+	agent.handleRequest(intentMap);
+});
+
+
+// CHAT FUNCTIONALITY
+client.on('connection', function(socket){
+    sendStatus = function(name,s){
+        client.to(customers[name]).emit('status', s);
+    }
+    
+    socket.on('loaddata', function(data){
+        message.find({from :data.self._id, to :data.with._id},function(err, res1){
+            if(err){
+                req.flash('error','Something went wrong');
+                return res.redirect('back');
+            }
+            else{
+                message.find({from :data.with._id, to :data.self._id},function(err, res2){
+                    if(err){
+                        req.flash("error", "Something went wrong")
+                        return res.redirect("back");
+                    } else {
+                        res = res1.concat(res2);
+                        res.sort(function(a, b) {
+                            var dateA = new Date(a.date), dateB = new Date(b.date);
+                            return dateA - dateB;
+                        });
+                        client.to(socket.id).emit('output',res);
+                    }
+                });
+            }
+        });
+    });
+    
+    socket.on('join', function (data) {
+        customers[data.self.username] = socket.id     
+    });
+	
+    //Client sending message
+    socket.on('input', function(data){
+       
+        user.find({username:data.from},function(err,from){
+            user.find({username:data.to},function(err,to){
+                message.create({from:from[0]._id, text: data.message,to:to[0]._id}, function(err,newmsg){
+                    if(err){
+                        req.flash('error','SOMETHING WENT WRONG');
+                       return res.redirect("back");
+                    } else {
+                        newmsg.text = data.message;
+                        newmsg.save();
+                        client.to(customers[data.from]).emit('output',[newmsg]);
+                        client.to(customers[data.to]).emit('output',[newmsg]);
+                        // Send status object
+                        sendStatus(data.from,{
+                            message: 'Message sent',
+                            clear: true
+                        });
+                    } 
+                });
+            });
+        });
+    });
+    socket.on('disconnect', function() {
+        arr = Object.entries(customers);
+        for(var i = 0; i < arr.length;i++){
+            if(arr[i][1]==socket.id){
+                user.find({username:arr[i][0]},function(err,usr){
+                    if(err){
+                        console.log(err);
+                    } else {
+                        usr[0].lastseen = Date.now();
+                        usr[0].save();
+                    }
+                });
+                delete customers[arr[i][0]];
+                break;
+            }
+        }
+    }); 
+});
+  
+// CHAT FINISHES
 
 app.get("/*", function (req, res) {
 	req.flash("error", "Error 404! The page you are looking for is not found.");

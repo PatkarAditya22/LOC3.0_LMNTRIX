@@ -1,0 +1,71 @@
+<html>
+  <head>
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <!-- Load Posenet -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+ </head>
+
+  <body>
+    <input type="text" id="ytlink" value="">
+    <button onclick="onStart()">Start Pose Match</button>
+    <div style="position: relative" class="margin">
+        <video id="inputVideo" autoplay muted playsinline></video>
+        <canvas id="overlay" />
+    </div>
+    <video id="ytvideo" width="500" height="400" src="" autoplay crossorigin='anonymous' playsinline></video>
+  </body>
+  <!-- Place your code in the script tag below. You can also use an external .js file -->
+  <script>
+    var flipHorizontal = false;
+    var net = null;
+    var isFaceDetectionModelLoaded = false;
+
+    function onStart() {
+      console.log("start");
+      document.getElementById("ytvideo").src = document.getElementById("ytlink").value;
+      onPlay()
+    }
+
+    async function onPlay() {
+        const videoEl1 = document.getElementById('inputVideo')
+        const videoEl2 = document.getElementById('ytvideo')
+
+        if(!videoEl1 || !videoEl2 || videoEl1.paused || videoEl1.ended || videoEl2.paused || videoEl2.ended || !isFaceDetectionModelLoaded)
+        return setTimeout(() => onPlay( ))
+
+        const pose1 = await net.estimateSinglePose(videoEl1, {
+            flipHorizontal: true
+        });
+        const pose2 = await net.estimateSinglePose(videoEl2, {
+            flipHorizontal: true
+        });
+
+        if(pose) {
+            console.log(poseMatch(pose1,pose2));
+        }
+
+        setTimeout(() => onPlay())
+    }
+
+    async function run() {
+        // load face detection and face expression recognition models
+        net = await posenet.load()
+        isFaceDetectionModelLoaded= true;
+        // try to access users webcam and stream the images
+        // to the video element
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {} })
+        const videoEl = document.getElementById('inputVideo')
+        videoEl.srcObject = stream
+    }
+
+    function poseMatch(pose1,pose2) {
+      console.log(pose1,pose2);
+      return 1;
+    }
+
+    function updateResults() {}
+
+    window.onload = run;
+  </script>
+</html>
