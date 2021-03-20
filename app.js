@@ -278,7 +278,7 @@ app.get("/chats",isLoggedIn,function(req,res){
 		if(err)
 		{
 			req.flash('error','Something went wrong');
-			return res.redirect('back');
+			// return res.redirect('back');
 		}
 		res.render("chat",{user:foundUser});		
 	})
@@ -1070,13 +1070,7 @@ app.post("/pay" , async (req,res) => {
 app.post('/upload/:id', isLoggedIn, ispatient, function (req, res) {
 	// The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
 	var startup_image = req.files.foo;
-	var fileName = `
-												$ {
-													req.body.fileName
-												}
-												_$ {
-													req.params.id
-												}.jpg `;
+	var fileName = `$ {	req.body.fileName}_$ {	req.params.id}.jpg `;
 	// Use the mv() method to place the file somewhere on your server
 	appointment.findById(req.params.id, function (err, foundappointment) {
 		if (err || !foundappointment) {
@@ -1140,10 +1134,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 				"richContent": [
 					[{
 						"type": "info",
-						"title": `
-												You might suffering from $ {
-													res.result
-												}.We have found the following doctors nearest to your location best treating the disease you are suffering from `,
+						"title": `You might be suffering from ${res.result}.We have found the following doctors nearest to your location best treating the disease you are suffering from `,
 					}],
 					[...doctors.map(doctor => {
 						return {
@@ -1166,8 +1157,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 				"richContent": [
 					[{
 						"type": "info",
-						"title": `
-												I couldn 't understand you.'
+						"title": `I couldn 't understand you.'
 												`,
 					}]
 				]
@@ -1194,15 +1184,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 					[...doctor.schedule.map(schedule => {
 						return {
 							"type": "accordion",
-							"title": `
-												$ {
-													schedule.day
-												}
-												$ {
-													schedule.from
-												}: 00 - $ {
-													schedule.to
-												}: 00 `,
+							"title": `${schedule.day} ${schedule.from}: 00 - ${schedule.to}: 00 `,
 						}
 					})],
 				]
@@ -1214,9 +1196,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 				"richContent": [
 					[{
 						"type": "info",
-						"title": `
-												I couldn 't understand you.'
-												`,
+						"title": `I couldn't understand you.`,
 					}]
 				]
 			}
@@ -1243,13 +1223,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 								"rawUrl": "https://example.com/images/logo.png"
 							}
 						},
-						"actionLink": ` / doctors / $ {
-													doctor._id
-												}
-												/bookappointment/$ {
-													agent.context.get("date-time").parameters["date-time"].date_time
-												}
-												`
+						"actionLink": `/doctors/${doctor._id}/bookappointment/${agent.context.get("date-time").parameters["date-time"].date_time}`
 					}]
 				]
 			}
@@ -1259,9 +1233,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 				"richContent": [
 					[{
 						"type": "info",
-						"title": `
-												I couldn 't understand you.'
-												`,
+						"title": `I couldn't understand you.`,
 					}]
 				]
 			}
@@ -1385,9 +1357,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 				"richContent": [
 					[{
 						"type": "info",
-						"title": `
-												I couldn 't understand you.'
-												`,
+						"title": `I couldn't understand you.`,
 					}]
 				]
 			}
@@ -1404,8 +1374,7 @@ app.post('/chatBot', express.json(), (req, res) => {
 	async function covid(agent) {
 		try {
 			var country = agent.context.get('country').parameters['country'];
-			var response = await fetch(`
-												https: //api.covid19api.com/live/country/${country}`);
+			var response = await fetch(`https: //api.covid19api.com/live/country/${country}`);
 			response = await response.json();
 			var payloadData = {
 				"richContent": [
