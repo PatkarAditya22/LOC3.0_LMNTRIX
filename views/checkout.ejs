@@ -76,6 +76,8 @@
     currency: "inr"
   };
 
+  console.log(orderData);
+
   var stripe = Stripe('pk_test_51IWLOeCYvekY4ZkChgBVF0S4eJ7XjsTnD0ZnM5wLK5D4KOMjpgEiXcMkxEvAInRPhDl4CgCaAKQ6lquq0lfCoQHQ003DF2zj6w');
   var elements = stripe.elements();
   // Set up Stripe.js and Elements to use in checkout form
@@ -111,7 +113,7 @@ form.addEventListener('submit', function(ev) {
             errorHanlder(result.error.message);
           } else {
             orderData.paymentMethodId = result.paymentMethod.id;
-
+            console.log(orderData);
             return fetch("/pay" , {
               method: "POST",
               headers: {
@@ -126,9 +128,10 @@ form.addEventListener('submit', function(ev) {
         })
         .then(function(response) {
           if (response.error) {
+            console.log("hellloo")
             errorHanlder(response.error);
           } else {
-            
+            console.log("jaa page pe")
             window.location.href = "/paymentsuccessful/" + "<%= appointment._id %>";  
           }
         }).catch(function(err){

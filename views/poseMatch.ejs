@@ -8,12 +8,13 @@
 
   <body>
     <input type="text" id="ytlink" value="">
+    Average Error <div id="error"></div>
     <button onclick="onStart()">Start Pose Match</button>
     <div style="position: relative" class="margin">
         <video id="inputVideo" autoplay muted playsinline></video>
         <canvas id="overlay" />
     </div>
-    <video id="ytvideo" width="500" height="400" src="" autoplay crossorigin='anonymous' playsinline></video>
+    <video id="ytvideo" width="500" height="400" src="" autoplay crossorigin='anonymous' playsinline controls></video>
   </body>
   <!-- Place your code in the script tag below. You can also use an external .js file -->
   <script>
@@ -41,8 +42,8 @@
             flipHorizontal: true
         });
 
-        if(pose) {
-            console.log(poseMatch(pose1,pose2));
+        if(pose1 && pose2) {
+          document.getElementById("error").innerText = poseMatch(pose1,pose2)
         }
 
         setTimeout(() => onPlay())
@@ -60,8 +61,12 @@
     }
 
     function poseMatch(pose1,pose2) {
-      console.log(pose1,pose2);
-      return 1;
+      let sum = 0;
+      for(let i=0; i<17; i++) {
+        console.log(pose1.keypoints[i].position.x*pose1.keypoints[i].score,pose2.keypoints[i].position.x,pose2.keypoints[i].score,pose1.keypoints[i].position.y,pose1.keypoints[i].score,pose2.keypoints[i].position.y,pose2.keypoints[i].score,((pose1.keypoints[i].position.x*pose1.keypoints[i].score-pose2.keypoints[i].position.x*pose2.keypoints[i].score)**2 + (pose1.keypoints[i].position.y*pose1.keypoints[i].score-pose2.keypoints[i].position.y*pose2.keypoints[i].score)**2)**0.5);
+        sum += ((pose1.keypoints[i].position.x*pose1.keypoints[i].score-pose2.keypoints[i].position.x*pose2.keypoints[i].score)**2 + (pose1.keypoints[i].position.y*pose1.keypoints[i].score-pose2.keypoints[i].position.y*pose2.keypoints[i].score)**2)**0.5
+      }
+      return (sum/17);
     }
 
     function updateResults() {}

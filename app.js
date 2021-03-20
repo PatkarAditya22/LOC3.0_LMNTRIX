@@ -46,6 +46,8 @@ const fileUpload = require('express-fileupload');
 mongoose.connect(databaseURL, {
 	useNewUrlParser: true
 });
+
+app.use(express.json());
 app.use(express.static(__dirname + "/public"));
 app.use(express.static(__dirname + "/images"));
 app.use(express.static(path.join(__dirname, '/weights')))
@@ -273,14 +275,19 @@ app.get("/feedback", isLoggedIn, function (req, res) {
 	res.render("feedback");
 });
 
-app.get("/chats",isLoggedIn,function(req,res){
-	user.findById(req.user._id,function(err,foundUser){
+app.get("/chats/:id",isLoggedIn,function(req,res){
+	appointment.findById(req.params.id,function(err,foundUser){
 		if(err)
 		{
 			req.flash('error','Something went wrong');
 			// return res.redirect('back');
 		}
-		res.render("chat",{user:foundUser});		
+		else
+		{
+			console.log(foundUser)
+			res.render("chat",{user:foundUser});	
+		}
+			
 	})
 	
 })
@@ -919,7 +926,6 @@ app.post("/doctorhome/:id", isLoggedIn, isdoctor, async function (req, res) {
 				foundappointment.status = "C";
 				foundappointment.time = req.sanitize(req.body.time);
 				foundappointment.save();
-				var pemail;
 				appointment.findById(req.params.id).populate("patientid").exec(function (err, patient) {
 					if (err || !patient) {
 						console.log(err)
@@ -1022,9 +1028,11 @@ app.post("/patienthome/:id", function(req,res){
 });
 
 app.post("/pay" , async (req,res) => {
+	console.log(req);
 	const { paymentMethodId, items, app_id, currency } = req.body;
   
 	const orderAmount = req.body.amount;
+
   
 	try {
 	  // Create new PaymentIntent with a PaymentMethod ID from the client.
@@ -1036,7 +1044,7 @@ app.post("/pay" , async (req,res) => {
 		confirm: true
 	  });
   
-	  console.log("💰 Payment received! Rs. " + orderAmount/100);
+	  console.log("Payment received! Rs. " + orderAmount/100);
 	  // The payment is complete and the money has been moved
 	  // You can add any post-payment code here (e.g. shipping, fulfillment, etc)
   
@@ -1048,6 +1056,30 @@ app.post("/pay" , async (req,res) => {
 		  } else {
 			  foundappointment.paid = true;
 			  foundappointment.save();
+			  appointment.findById(foundappointment._id).populate("patientid").exec(function (err, patient) {
+					if (err || !patient) {
+						console.log(err)
+						// res.redirect("back");
+						res.send({error : err});
+					} else {
+						console.log(patient);
+						var mailOptions = {
+							from: 'pblvjti@gmail.com',
+							to: patient.patientid.email,
+							subject: 'Email for confirmation of Payment',
+							text: `Your Payment is Successfull! You have paid ${foundappointment.billamount} to Dr.${foundappointment.doctorname}.`
+						};
+
+						console.log(mailOptions);
+						transporter.sendMail(mailOptions, function (error, info) {
+							if (error) {
+								console.log(error);
+							} else {
+								console.log('Email sent: ' + info.response);
+							}
+						});
+					}
+				})
 		  }
 	  })
 	  res.send({ clientSecret: intent.client_secret });
@@ -1060,12 +1092,22 @@ app.post("/pay" , async (req,res) => {
 			"This card requires authentication in order to proceeded. Please use a different card."
 		});
 	  } else {
+		console.log("in error");
 		res.send({ error: e.message });
 	  }
 	}
   
-  })
-  
+  });
+
+  app.get("/paymentsuccessful/:id",function(req,res){
+	appointment.findById(req.params.id,function(err,foundappointment){
+		if(err){
+			console.log(err);
+		} else {
+			res.render("paymentsuccessful",{appointment : foundappointment} )
+		} 
+	});  
+  });
 
 app.post('/upload/:id', isLoggedIn, ispatient, function (req, res) {
 	// The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file

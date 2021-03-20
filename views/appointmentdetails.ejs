@@ -116,11 +116,17 @@
                     <p><%= appointment.prescription%></p>
                 </div>
 
-
-                <div class="form-group">
-                    <h1>Consulting charges</h1>
-                    <p>₹<%= appointment.billamount%></p>
-                </div>
+                <% if(appointment.paid == true) { %>
+                    <div class="form-group">
+                        <h1>Consulting charges</h1>
+                        <p>₹<%= appointment.billamount%> -  Paid</p>
+                    </div>                    
+                <% } else { %>
+                    <div class="form-group">
+                        <h1>Consulting charges</h1>
+                        <p>₹<%= appointment.billamount%> -  To be Paid</p>
+                    </div>                    
+                <% } %> 
             </div>
             <% }%>
         </div>

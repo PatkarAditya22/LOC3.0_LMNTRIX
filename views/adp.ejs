@@ -127,6 +127,7 @@
                     <p>Please Be Present At The Clinic At The Assigned Appointment Time %></p>
                 </div>
                 <a class="btn btn-success" href="/videoCall/<%= appointment._id %>">Or Join Virtual Meet</a>
+                <a class="btn btn-success" href="/chats/<%=appointment._id%>">Join Chat here</a>
                 <% }%>
 
                 <div class="row text-center justify-content-center my-5">
@@ -189,12 +190,18 @@
                     </div>
                 </div>
 
-                <h1 style="text-align: center"><u>Consulting charges</u></h1>
-                <form action="/patienthome/<%= appointment._id %>" method="post" class="mx-auto">
-                    <div>
-                        <button type="submit" class="brdr mx-auto">Pay ₹<%= appointment.billamount%></button>
-                    </div>
-                </form>
+                <% if(appointment.paid != true) { %>
+                    
+                                    <h1 style="text-align: center"><u>Consulting charges</u></h1>
+                                    <form action="/patienthome/<%= appointment._id %>" method="post" class="mx-auto">
+                                        <div>
+                                            <button type="submit" class="brdr mx-auto">Pay ₹<%= appointment.billamount%></button>
+                                        </div>
+                                    </form>
+
+                <% } else { %>
+                    <h1 style="text-align: center"><u>Consulting charges already paid.</u></h1>
+                <% } %>
                 <!-- <div class="form-group">
                     <p class="brdr">₹<%= appointment.billamount%></p>
                 </div> -->
@@ -210,4 +217,3 @@
 </div>
 </div>
 <% include partials/footer %>
-"subtitle": "Info item subtitle",
