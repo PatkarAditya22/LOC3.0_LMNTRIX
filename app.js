@@ -260,7 +260,22 @@ app.get("/signin", nouser, function (req, res) {
 });
 
 app.get("/aplist", isLoggedIn, isdoctor, function (req, res) {
-	res.render("aplist");
+	var counts = {}
+	user.findById(req.user._id).populate("appointments").exec(async function(err,appts){
+		if(err){
+			console.log(err);
+			res.redirect("back");
+		}
+		else{
+			console.log("appts-",appts);
+			appts.appointments.forEach(function(apt){
+				if(!counts[`${apt.appointmentdate.getDate()}/${apt.appointmentdate.getMonth()+1}/${apt.appointmentdate.getFullYear()}`]) counts[`${apt.appointmentdate.getDate()}/${apt.appointmentdate.getMonth()+1}/${apt.appointmentdate.getFullYear()}`]=1;
+				else counts[`${apt.appointmentdate.getDate()}/${apt.appointmentdate.getMonth()+1}/${apt.appointmentdate.getFullYear()}`]++;
+			});
+			console.log("counts =",counts);
+			res.render("aplist",{counts: counts});
+		}
+	});
 });
 
 app.get("/profileupdate", isLoggedIn, isdoctor, function (req, res) {
@@ -1469,82 +1484,6 @@ app.post('/chatBot', express.json(), (req, res) => {
 
 
 // CHAT FUNCTIONALITY
-client.on('connection', function(socket){
-    sendStatus = function(name,s){
-        client.to(customers[name]).emit('status', s);
-    }
-    
-    socket.on('loaddata', function(data){
-        message.find({from :data.self._id, to :data.with._id},function(err, res1){
-            if(err){
-                req.flash('error','Something went wrong');
-                return res.redirect('back');
-            }
-            else{
-                message.find({from :data.with._id, to :data.self._id},function(err, res2){
-                    if(err){
-                        req.flash("error", "Something went wrong")
-                        return res.redirect("back");
-                    } else {
-                        res = res1.concat(res2);
-                        res.sort(function(a, b) {
-                            var dateA = new Date(a.date), dateB = new Date(b.date);
-                            return dateA - dateB;
-                        });
-                        client.to(socket.id).emit('output',res);
-                    }
-                });
-            }
-        });
-    });
-    
-    socket.on('join', function (data) {
-        customers[data.self.username] = socket.id     
-    });
-	
-    //Client sending message
-    socket.on('input', function(data){
-       
-        user.find({username:data.from},function(err,from){
-            user.find({username:data.to},function(err,to){
-                message.create({from:from[0]._id, text: data.message,to:to[0]._id}, function(err,newmsg){
-                    if(err){
-                        req.flash('error','SOMETHING WENT WRONG');
-                       return res.redirect("back");
-                    } else {
-                        newmsg.text = data.message;
-                        newmsg.save();
-                        client.to(customers[data.from]).emit('output',[newmsg]);
-                        client.to(customers[data.to]).emit('output',[newmsg]);
-                        // Send status object
-                        sendStatus(data.from,{
-                            message: 'Message sent',
-                            clear: true
-                        });
-                    } 
-                });
-            });
-        });
-    });
-    socket.on('disconnect', function() {
-        arr = Object.entries(customers);
-        for(var i = 0; i < arr.length;i++){
-            if(arr[i][1]==socket.id){
-                user.find({username:arr[i][0]},function(err,usr){
-                    if(err){
-                        console.log(err);
-                    } else {
-                        usr[0].lastseen = Date.now();
-                        usr[0].save();
-                    }
-                });
-                delete customers[arr[i][0]];
-                break;
-            }
-        }
-    }); 
-});
-  
 // CHAT FINISHES
 
 app.get("/*", function (req, res) {

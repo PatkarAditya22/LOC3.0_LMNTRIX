@@ -37,9 +37,22 @@
                 <div class="col-md-4">
                     <div class="card mb-3">
                             <div class="card-body">
-                              <h2 class="card-title"><%= d.getDate() + "/" + month + "/" + d.getFullYear() %></h2>
+                                <% var x = d.getDate() + "/" + month + "/" + d.getFullYear() %>
+                              <h2 class="card-title"><%= x %></h2>
                               <p class="card-text" style="font-size: 26px;"><%= schedule.day.toUpperCase() %></p>
                               <p class="card-text" style="font-size: 40px; font-weight: 900;"><%= schedule.from + ":00" %> - <%= schedule.to + ":00" %></p>
+                                <% if(!counts[x]) {%> 
+                                <p class="card-text text-info " style="font-size: 26px; font-weight: 600;">Appointments : 0</p>
+                                <% } %>
+                                <% if(counts[x] <= 2 ) { %>
+                                <p class="card-text text-info" style="font-size: 26px; font-weight: 600;">Appointments : <%= !counts[x]?0:counts[x] %></p>
+                                <% } %>
+                                <% if(counts[x] >2 && counts[x] <= 5) { %> 
+                                    <p class="card-text text-danger" style="font-size: 26px; font-weight: 600; color: red;">Appointments : <%= !counts[x]?0:counts[x] %></p>
+                                <% } %> 
+                                <% if(counts[x] > 5) { %>                                        
+                                    <p class="card-text text-success" style="font-size: 26px; font-weight: 600; color:green;">Appointments : <%= !counts[x]?0:counts[x] %></p>
+                                <% } %>
                               <p class="card-text"><small class="text-muted"><a href="/doctorhome/date/<%= d.getTime() %>" class="btn btn-danger">View Details</a></small></p>
                             </div>
                       </div>

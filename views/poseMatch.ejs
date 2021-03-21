@@ -4,20 +4,40 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <!-- Load Posenet -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+    <script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
  </head>
 
-  <body>
+  <body style="background-color: black;height: 1200px;">
     <input type="text" id="ytlink" value="">
     Average Error <div id="error"></div>
     <button onclick="onStart()">Start Pose Match</button>
-    <div style="position: relative" class="margin">
-        <video id="inputVideo" autoplay muted playsinline></video>
-        <canvas id="overlay" />
+    <div class="row margin">
+        <div class="col-md-6">
+          <video id="inputVideo" autoplay muted playsinline></video>
+        </div>
+        <div class="col-md-6">
+          <canvas id="overlay" />
+        </div>
     </div>
     <video id="ytvideo" width="500" height="400" src="" autoplay crossorigin='anonymous' playsinline controls></video>
+    <div id="chartContainer" class="my-5"></div>
   </body>
   <!-- Place your code in the script tag below. You can also use an external .js file -->
   <script>
+    var chart;
+    chart = new CanvasJS.Chart("chartContainer", {
+      animationEnabled: true,
+      theme: "light2",
+      title:{
+        text: "Average Error in pose"
+      },
+      data: [{        
+		    type: "line",
+      	indexLabelFontSize: 16,
+        dataPoints:[] 
+      }]
+    });
+    chart.render();
     var flipHorizontal = false;
     var net = null;
     var isFaceDetectionModelLoaded = false;
@@ -43,7 +63,10 @@
         });
 
         if(pose1 && pose2) {
-          document.getElementById("error").innerText = poseMatch(pose1,pose2)
+          let err = poseMatch(pose1,pose2)
+          document.getElementById("error").textContent = err
+          chart.options.data[0].dataPoints.push({y:err})
+          chart.render();
         }
 
         setTimeout(() => onPlay())
@@ -63,7 +86,6 @@
     function poseMatch(pose1,pose2) {
       let sum = 0;
       for(let i=0; i<17; i++) {
-        console.log(pose1.keypoints[i].position.x*pose1.keypoints[i].score,pose2.keypoints[i].position.x,pose2.keypoints[i].score,pose1.keypoints[i].position.y,pose1.keypoints[i].score,pose2.keypoints[i].position.y,pose2.keypoints[i].score,((pose1.keypoints[i].position.x*pose1.keypoints[i].score-pose2.keypoints[i].position.x*pose2.keypoints[i].score)**2 + (pose1.keypoints[i].position.y*pose1.keypoints[i].score-pose2.keypoints[i].position.y*pose2.keypoints[i].score)**2)**0.5);
         sum += ((pose1.keypoints[i].position.x*pose1.keypoints[i].score-pose2.keypoints[i].position.x*pose2.keypoints[i].score)**2 + (pose1.keypoints[i].position.y*pose1.keypoints[i].score-pose2.keypoints[i].position.y*pose2.keypoints[i].score)**2)**0.5
       }
       return (sum/17);
