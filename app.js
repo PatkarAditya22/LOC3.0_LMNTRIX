@@ -1127,7 +1127,7 @@ app.post("/pay" , async (req,res) => {
 app.post('/upload/:id', isLoggedIn, ispatient, function (req, res) {
 	// The name of the input field (i.e. "sampleFile") is used to retrieve the uploaded file
 	var startup_image = req.files.foo;
-	var fileName = `$ {	req.body.fileName}_$ {	req.params.id}.jpg `;
+	var fileName = `${req.body.fileName}_${req.params.id}.jpg`;
 	// Use the mv() method to place the file somewhere on your server
 	appointment.findById(req.params.id, function (err, foundappointment) {
 		if (err || !foundappointment) {
