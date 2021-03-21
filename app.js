@@ -231,8 +231,9 @@ app.use(function (req, res, next) {
 });
 
 app.get("/", async function (req, res) {
-	let response = await fetch("https://newsapi.org/v2/everything?q=COVID&from=2021-02-25&sortBy=publishedAt&apiKey=452748674a1945a99d99275e720f6c5c&pageSize=30&page=2&language=en");
+	let response = await fetch("https://newsapi.org/v2/everything?q=COVID&from=2021-02-25&sortBy=publishedAt&apiKey=920ce28a536e42328e05cd802508cca6&pageSize=30&page=2&language=en");
 	response = await response.json();
+	console.log(response)
 	res.render("homepage", {
 		response: response.articles
 	});
