@@ -173,6 +173,7 @@ def suggestdiet():
     snack2=algo.s2calc(tdee)
     dinner=algo.dcalc(tdee)
     snack3=algo.s3calc(tdee)
+    print("reachhed")
     return {
         "breakfast": breakfast,
         "snack1": snack1,
