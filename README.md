@@ -1,6 +1,6 @@
 # LOC3.0_LMNTRIX
 
-### Link to hosted website(hosted on heroku):  [https://wecare.herokuapp.com/](https://chatbot-clinicapp.herokuapp.com/)
+### Link to hosted website(hosted on heroku):  [https://wecareloc.herokuapp.com/](https://chatbot-clinicapp.herokuapp.com/)
 
 ### Instructions to run the application
 
