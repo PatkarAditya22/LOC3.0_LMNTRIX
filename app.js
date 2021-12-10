@@ -240,8 +240,10 @@ app.use(function (req, res, next) {
 });
 
 app.get("/", async function (req, res) {
+	let d = new Date();
+	let str = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 	let response = await fetch(
-		"https://newsapi.org/v2/everything?q=COVID&from=2021-09-01&sortBy=publishedAt&apiKey=920ce28a536e42328e05cd802508cca6&pageSize=30&page=2&language=en"
+		`https://newsapi.org/v2/everything?q=COVID&from=${str}&sortBy=publishedAt&apiKey=920ce28a536e42328e05cd802508cca6&pageSize=30&page=2&language=en`
 	);
 	response = await response.json();
 	console.log(response);
@@ -273,7 +275,8 @@ app.get("/signin", nouser, function (req, res) {
 
 app.get("/aplist", isLoggedIn, isdoctor, function (req, res) {
 	var counts = {};
-	user.findById(req.user._id)
+	user
+		.findById(req.user._id)
 		.populate("appointments")
 		.exec(async function (err, appts) {
 			if (err) {
@@ -431,9 +434,7 @@ app.post(
 				if (req.file) {
 					try {
 						await cloudinary.v2.uploader.destroy(doctor.image_id);
-						var result = await cloudinary.v2.uploader.upload(
-							req.file.path
-						);
+						var result = await cloudinary.v2.uploader.upload(req.file.path);
 						doctor.image_id = result.public_id;
 						doctor.image = result.secure_url;
 					} catch (err) {
@@ -460,7 +461,8 @@ app.post(
 );
 
 app.get("/stats", isLoggedIn, isdoctor, function (req, res) {
-	user.findById(req.user._id)
+	user
+		.findById(req.user._id)
 		.populate("appointments")
 		.exec(function (err, founddoctor) {
 			if (err || !founddoctor) {
@@ -485,27 +487,17 @@ app.get("/stats", isLoggedIn, isdoctor, function (req, res) {
 						if (schedule.day == days[d.getDay()]) {
 							var j = 0;
 							founddoctor.appointments.reverse();
-							founddoctor.appointments.forEach(function (
-								appointment
-							) {
+							founddoctor.appointments.forEach(function (appointment) {
 								if (
-									d.getDate() ==
-										appointment.appointmentdate.getDate() &&
-									d.getMonth() ==
-										appointment.appointmentdate.getMonth() &&
-									d.getFullYear() ==
-										appointment.appointmentdate.getFullYear()
+									d.getDate() == appointment.appointmentdate.getDate() &&
+									d.getMonth() == appointment.appointmentdate.getMonth() &&
+									d.getFullYear() == appointment.appointmentdate.getFullYear()
 								) {
 									j++;
 								}
 							});
 							var month = d.getMonth() + 1;
-							var t =
-								d.getDate() +
-								"/" +
-								month +
-								"/" +
-								d.getFullYear();
+							var t = d.getDate() + "/" + month + "/" + d.getFullYear();
 							appo.push({
 								label: t,
 								y: j,
@@ -513,9 +505,7 @@ app.get("/stats", isLoggedIn, isdoctor, function (req, res) {
 						}
 					});
 					d.setTime(
-						c.getTime() +
-							sub * 24 * 60 * 60 * 1000 +
-							i * 24 * 60 * 60 * 1000
+						c.getTime() + sub * 24 * 60 * 60 * 1000 + i * 24 * 60 * 60 * 1000
 					);
 				}
 				res.render("stats", {
@@ -526,7 +516,8 @@ app.get("/stats", isLoggedIn, isdoctor, function (req, res) {
 });
 
 app.get("/doctorhome/date/:id", isLoggedIn, isdoctor, function (req, res) {
-	user.findById(req.user._id)
+	user
+		.findById(req.user._id)
 		.populate("appointments")
 		.exec(function (err, founddoctor) {
 			if (err) {
@@ -541,10 +532,8 @@ app.get("/doctorhome/date/:id", isLoggedIn, isdoctor, function (req, res) {
 					t.setTime(req.params.id);
 					if (
 						t.getDate() == appointment.appointmentdate.getDate() &&
-						t.getMonth() ==
-							appointment.appointmentdate.getMonth() &&
-						t.getFullYear() ==
-							appointment.appointmentdate.getFullYear()
+						t.getMonth() == appointment.appointmentdate.getMonth() &&
+						t.getFullYear() == appointment.appointmentdate.getFullYear()
 					) {
 						if (appointment.time) {
 							appo1.push(appointment);
@@ -555,11 +544,9 @@ app.get("/doctorhome/date/:id", isLoggedIn, isdoctor, function (req, res) {
 				});
 				appo1.sort(function (a, b) {
 					var temp1 =
-						60 * Number(a.time[0] + a.time[1]) +
-						Number(a.time[3] + a.time[4]);
+						60 * Number(a.time[0] + a.time[1]) + Number(a.time[3] + a.time[4]);
 					var temp2 =
-						60 * Number(b.time[0] + b.time[1]) +
-						Number(b.time[3] + b.time[4]);
+						60 * Number(b.time[0] + b.time[1]) + Number(b.time[3] + b.time[4]);
 					return temp1 - temp2;
 				});
 				var t1 = new Date();
@@ -582,7 +569,8 @@ app.get("/doctorhome/date/:id", isLoggedIn, isdoctor, function (req, res) {
 });
 
 app.get("/patienthome", isLoggedIn, ispatient, function (req, res) {
-	user.findById(req.user._id)
+	user
+		.findById(req.user._id)
 		.populate("appointments")
 		.exec(function (err, foundpatient) {
 			if (err || !foundpatient) {
@@ -671,89 +659,72 @@ app.post(
 		cloudinary.uploader.upload(req.file.path, function (result) {
 			user.findById(req.params.id, function (err, founddoctor) {
 				if (err) {
-					req.flash(
-						"error",
-						"An Error Occured!! Please Try Again Later"
-					);
+					req.flash("error", "An Error Occured!! Please Try Again Later");
 					res.redirect("back");
 				} else {
 					if (result.secure_url) {
-						geocode(req.sanitize(req.body.address)).then(
-							(response) => {
-								founddoctor.loc.x =
-									response.candidates[0].location.x;
-								founddoctor.loc.y =
-									response.candidates[0].location.y;
-								founddoctor.image = result.secure_url;
-								founddoctor.image_id = result.public_id;
-								founddoctor.description = req.sanitize(
-									req.body.description
-								);
-								founddoctor.address = req.sanitize(
-									req.body.address
-								);
-								if (req.body.id0 == "on") {
-									founddoctor.schedule.push({
-										day: days[0],
-										from: req.body.id0from,
-										to: req.body.id0to,
-									});
-								}
-								if (req.body.id1 == "on") {
-									founddoctor.schedule.push({
-										day: days[1],
-										from: req.body.id1from,
-										to: req.body.id1to,
-									});
-								}
-								if (req.body.id2 == "on") {
-									founddoctor.schedule.push({
-										day: days[2],
-										from: req.body.id2from,
-										to: req.body.id2to,
-									});
-								}
-								if (req.body.id3 == "on") {
-									founddoctor.schedule.push({
-										day: days[3],
-										from: req.body.id3from,
-										to: req.body.id3to,
-									});
-								}
-								if (req.body.id4 == "on") {
-									founddoctor.schedule.push({
-										day: days[4],
-										from: req.body.id4from,
-										to: req.body.id4to,
-									});
-								}
-								if (req.body.id5 == "on") {
-									founddoctor.schedule.push({
-										day: days[5],
-										from: req.body.id5from,
-										to: req.body.id5to,
-									});
-								}
-								if (req.body.id6 == "on") {
-									founddoctor.schedule.push({
-										day: days[6],
-										from: req.body.id6from,
-										to: req.body.id6to,
-									});
-								}
-								founddoctor.save();
-								req.flash(
-									"success",
-									"Details Added Successfully"
-								);
-								res.redirect("/aplist");
+						geocode(req.sanitize(req.body.address)).then((response) => {
+							founddoctor.loc.x = response.candidates[0].location.x;
+							founddoctor.loc.y = response.candidates[0].location.y;
+							founddoctor.image = result.secure_url;
+							founddoctor.image_id = result.public_id;
+							founddoctor.description = req.sanitize(req.body.description);
+							founddoctor.address = req.sanitize(req.body.address);
+							if (req.body.id0 == "on") {
+								founddoctor.schedule.push({
+									day: days[0],
+									from: req.body.id0from,
+									to: req.body.id0to,
+								});
 							}
-						);
+							if (req.body.id1 == "on") {
+								founddoctor.schedule.push({
+									day: days[1],
+									from: req.body.id1from,
+									to: req.body.id1to,
+								});
+							}
+							if (req.body.id2 == "on") {
+								founddoctor.schedule.push({
+									day: days[2],
+									from: req.body.id2from,
+									to: req.body.id2to,
+								});
+							}
+							if (req.body.id3 == "on") {
+								founddoctor.schedule.push({
+									day: days[3],
+									from: req.body.id3from,
+									to: req.body.id3to,
+								});
+							}
+							if (req.body.id4 == "on") {
+								founddoctor.schedule.push({
+									day: days[4],
+									from: req.body.id4from,
+									to: req.body.id4to,
+								});
+							}
+							if (req.body.id5 == "on") {
+								founddoctor.schedule.push({
+									day: days[5],
+									from: req.body.id5from,
+									to: req.body.id5to,
+								});
+							}
+							if (req.body.id6 == "on") {
+								founddoctor.schedule.push({
+									day: days[6],
+									from: req.body.id6from,
+									to: req.body.id6to,
+								});
+							}
+							founddoctor.save();
+							req.flash("success", "Details Added Successfully");
+							res.redirect("/aplist");
+						});
 					} else {
-						req.flash(
-							"error",
-							"An Error Occured!! Please Try Again Later"
-						);
+						req.flash("error", "An Error Occured!! Please Try Again Later");
 						res.redirect("back");
 					}
 				}
@@ -819,7 +790,8 @@ app.get(
 		});
 	},
 	function (req, res) {
-		user.findById(req.params.id)
+		user
+			.findById(req.params.id)
 			.populate("reviews")
 			.populate("appointments")
 			.exec(function (err, founddoctor) {
@@ -843,7 +815,8 @@ app.get(
 );
 
 app.get("/history/:id", isLoggedIn, isdoctor, function (req, res) {
-	user.findById(req.params.id)
+	user
+		.findById(req.params.id)
 		.populate("appointments")
 		.exec(function (err, foundpatient) {
 			if (err || !foundpatient) {
@@ -955,10 +928,7 @@ app.post(
 					},
 					function (err, appointment) {
 						if (err || !appointment) {
-							req.flash(
-								"error",
-								"An Error Occured!! Please Try Again"
-							);
+							req.flash("error", "An Error Occured!! Please Try Again");
 							res.redirect("back");
 						} else {
 							appointment.save();
@@ -1002,10 +972,7 @@ app.get(
 					function (err, appointment) {
 						if (err || !appointment) {
 							console.log(err);
-							req.flash(
-								"error",
-								"An Error Occured!! Please Try Again"
-							);
+							req.flash("error", "An Error Occured!! Please Try Again");
 							res.redirect("back");
 						} else {
 							appointment.save();
@@ -1043,10 +1010,7 @@ app.post("/addappointment", isLoggedIn, isdoctor, function (req, res) {
 				},
 				function (err, appointment) {
 					if (err || !appointment) {
-						req.flash(
-							"error",
-							"An Error Occured!! Please Try Again"
-						);
+						req.flash("error", "An Error Occured!! Please Try Again");
 						res.redirect("back");
 					} else {
 						appointment.save();
@@ -1054,8 +1018,7 @@ app.post("/addappointment", isLoggedIn, isdoctor, function (req, res) {
 						doctor.save();
 						req.flash("success", "Appointment Added Successfully");
 						res.redirect(
-							"/doctorhome/date/" +
-								new Date(req.body.appointmentdate).getTime()
+							"/doctorhome/date/" + new Date(req.body.appointmentdate).getTime()
 						);
 					}
 				}
@@ -1121,24 +1084,18 @@ app.post("/doctorhome/:id", isLoggedIn, isdoctor, async function (req, res) {
 							var mailOptions = {
 								from: "pblvjti@gmail.com",
 								to: patient.patientid.email,
-								subject:
-									"Email for confirmation of appointment",
+								subject: "Email for confirmation of appointment",
 								text: "Your appointment is confirmed!",
 							};
 
 							console.log(mailOptions);
-							transporter.sendMail(
-								mailOptions,
-								function (error, info) {
-									if (error) {
-										console.log(error);
-									} else {
-										console.log(
-											"Email sent: " + info.response
-										);
-									}
+							transporter.sendMail(mailOptions, function (error, info) {
+								if (error) {
+									console.log(error);
+								} else {
+									console.log("Email sent: " + info.response);
 								}
-							);
+							});
 						}
 					});
 				req.flash("success", "Appointment Details Updated");
@@ -1160,12 +1117,8 @@ app.post("/doctorhome/:id", isLoggedIn, isdoctor, async function (req, res) {
 			}
 			if (req.body.status == "CNF") {
 				foundappointment.status = "CNF";
-				foundappointment.description = req.sanitize(
-					req.body.description
-				);
-				foundappointment.prescription = req.sanitize(
-					req.body.prescription
-				);
+				foundappointment.description = req.sanitize(req.body.description);
+				foundappointment.prescription = req.sanitize(req.body.prescription);
 				foundappointment.billamount = req.sanitize(req.body.billamount);
 				foundappointment.save();
 				req.flash("success", "Appointment Details Updated");
@@ -1274,18 +1227,13 @@ app.post("/pay", async (req, res) => {
 							};
 
 							console.log(mailOptions);
-							transporter.sendMail(
-								mailOptions,
-								function (error, info) {
-									if (error) {
-										console.log(error);
-									} else {
-										console.log(
-											"Email sent: " + info.response
-										);
-									}
+							transporter.sendMail(mailOptions, function (error, info) {
+								if (error) {
+									console.log(error);
+								} else {
+									console.log("Email sent: " + info.response);
 								}
-							);
+							});
 						}
 					});
 			}
@@ -1296,7 +1244,8 @@ app.post("/pay", async (req, res) => {
 		// See https://stripe.com/docs/declines/codes for more
 		if (e.code === "authentication_required") {
 			res.send({
-				error: "This card requires authentication in order to proceeded. Please use a different card.",
+				error:
+					"This card requires authentication in order to proceeded. Please use a different card.",
 			});
 		} else {
 			console.log("in error");
@@ -1506,12 +1455,8 @@ app.post("/chatBot", express.json(), (req, res) => {
 									rawUrl: "https://example.com/images/logo.png",
 								},
 							},
-							actionLink: `/doctors/${
-								doctor._id
-							}/bookappointment/${
-								agent.context.get("date-time").parameters[
-									"date-time"
-								].date_time
+							actionLink: `/doctors/${doctor._id}/bookappointment/${
+								agent.context.get("date-time").parameters["date-time"].date_time
 							}`,
 						},
 					],
@@ -1539,8 +1484,7 @@ app.post("/chatBot", express.json(), (req, res) => {
 	}
 	async function diet(agent) {
 		try {
-			var info =
-				agent.context.get("phys_exercise").parameters["phys_exercise"];
+			var info = agent.context.get("phys_exercise").parameters["phys_exercise"];
 			var requestBody = {
 				name: "Mehdi",
 				weight: agent.context.get("weight").parameters["weight"],
@@ -1553,16 +1497,13 @@ app.post("/chatBot", express.json(), (req, res) => {
 			console.log(requestBody);
 			var responseData;
 
-			const response = await fetch(
-				"http://dde92e8ab0af.ngrok.io/suggestdiet",
-				{
-					method: "POST",
-					body: JSON.stringify(requestBody),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}
-			);
+			const response = await fetch("http://dde92e8ab0af.ngrok.io/suggestdiet", {
+				method: "POST",
+				body: JSON.stringify(requestBody),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
 			const json = await response.json();
 			console.log(json);
 			var payloadData = {
@@ -1690,23 +1631,19 @@ app.post("/chatBot", express.json(), (req, res) => {
 							title: response[0].Country,
 							text: [
 								`Confirmed Cases in ${country} ${response.reduce(
-									(Confirmed, province) =>
-										Confirmed + province.Confirmed,
+									(Confirmed, province) => Confirmed + province.Confirmed,
 									0
 								)}`,
 								`Confirmed Deaths in ${country} ${response.reduce(
-									(Deaths, province) =>
-										Deaths + province.Deaths,
+									(Deaths, province) => Deaths + province.Deaths,
 									0
 								)}`,
 								`Confirmed Recovered in ${country} ${response.reduce(
-									(Recovered, province) =>
-										Recovered + province.Recovered,
+									(Recovered, province) => Recovered + province.Recovered,
 									0
 								)}`,
 								`Confirmed Active in ${country} ${response.reduce(
-									(Active, province) =>
-										Active + province.Active,
+									(Active, province) => Active + province.Active,
 									0
 								)}`,
 							],
